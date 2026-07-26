@@ -6,6 +6,8 @@ from pathlib import Path
 
 from bikeneat_functions import aggregate_the_no_infra_category, classify_with_bikeneat
 
+RESULTS_DIR = "data/results"
+
 
 def _serialise_for_export(gdf):
     """Convert dict/list columns to JSON strings so OGR drivers can write them."""
@@ -31,13 +33,19 @@ def main():
                         help="include the individual indicator columns")
     parser.add_argument("--export-pbf", action="store_true",
                         help="also write a PBF tagged with bicycle_infrastructure")
+    parser.add_argument("--results-dir", default=RESULTS_DIR,
+                        help=f"where the tagged PBF is written (default: {RESULTS_DIR})")
     args = parser.parse_args()
 
     gdf = classify_with_bikeneat(
         args.pbf,
         single=args.single,
         aggregated=not args.no_aggregate,
-        output_arg={"include_indicators": args.indicators, "export_pbf": args.export_pbf},
+        output_arg={
+            "include_indicators": args.indicators,
+            "export_pbf": args.export_pbf,
+            "pbf_out_dir": args.results_dir,
+        },
     )
 
     if gdf is None:
@@ -54,6 +62,7 @@ def main():
 
     if args.out:
         out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
         export = _serialise_for_export(gdf)
         if out.suffix == ".csv":
             export.drop(columns=export.geometry.name).to_csv(out, index=False)

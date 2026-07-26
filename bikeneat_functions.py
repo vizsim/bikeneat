@@ -1,4 +1,6 @@
 import json
+from pathlib import Path
+
 import pyrosm
 import pandas as pd
 import geopandas as gpd
@@ -502,11 +504,17 @@ def aggregate_the_no_infra_category(cat):
 
     return options[cat] if cat in options.keys() else cat
 
-def _export_to_pbf(input_pbf, osm_df):
+def _export_to_pbf(input_pbf, osm_df, output_dir=None):
     """
         Export classification results to a new PBF file by adding bicycle_infrastructure tag to ways.
+
+        The output is named 'bikeneat_<input filename>' and is written to output_dir if given,
+        otherwise next to the input file.
         """
-    output_pbf = 'bikeneat_' + input_pbf
+    input_path = Path(input_pbf)
+    target_dir = Path(output_dir) if output_dir else input_path.parent
+    target_dir.mkdir(parents=True, exist_ok=True)
+    output_pbf = str(target_dir / ('bikeneat_' + input_path.name))
     try:
         import osmium
         way_to_infra = dict(zip(osm_df['id'], osm_df['bicycle_infrastructure']))
@@ -628,7 +636,7 @@ def classify_with_bikeneat(pbf_path, single=False, aggregated=True, output_arg={
 
         # Export to PBF if requested
         if output_arg.get("export_pbf", False) and 'id' in osm_df.columns:
-            _export_to_pbf(pbf_path, osm_df)
+            _export_to_pbf(pbf_path, osm_df, output_dir=output_arg.get("pbf_out_dir"))
 
         return osm_df
 

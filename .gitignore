@@ -2,6 +2,10 @@ __pycache__/
 *.py[cod]
 .venv/
 .pytest_cache/
-bikeneat_*.osm.pbf
-*.gpkg
 
+# generated classification results
+data/results/
+
+# raw OSM extracts are large downloads; the small Wedel sample stays tracked
+data/raw/*.osm.pbf
+!data/raw/Wedel_highway.osm.pbf

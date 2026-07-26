@@ -174,7 +174,7 @@ def test_output_arg_export_pbf_false_does_not_call_export(bikeneat, monkeypatch)
 
     export_calls = []
 
-    def fake_export(input_pbf, osm_df):
+    def fake_export(input_pbf, osm_df, output_dir=None):
         export_calls.append((input_pbf, osm_df))
 
     monkeypatch.setattr(bikeneat, "_export_to_pbf", fake_export)
@@ -193,7 +193,7 @@ def test_output_arg_export_pbf_true_calls_export_with_result_dataframe(bikeneat,
 
     export_calls = []
 
-    def fake_export(input_pbf, osm_df):
+    def fake_export(input_pbf, osm_df, output_dir=None):
         export_calls.append((input_pbf, osm_df.copy()))
 
     monkeypatch.setattr(bikeneat, "_export_to_pbf", fake_export)
@@ -216,7 +216,7 @@ def test_output_arg_include_indicators_and_export_pbf_together(bikeneat, monkeyp
 
     export_calls = []
 
-    def fake_export(input_pbf, osm_df):
+    def fake_export(input_pbf, osm_df, output_dir=None):
         export_calls.append((input_pbf, osm_df.copy()))
 
     monkeypatch.setattr(bikeneat, "_export_to_pbf", fake_export)
@@ -239,7 +239,7 @@ def test_output_arg_include_indicators_false_and_export_pbf_true(bikeneat, monke
 
     export_calls = []
 
-    def fake_export(input_pbf, osm_df):
+    def fake_export(input_pbf, osm_df, output_dir=None):
         export_calls.append((input_pbf, osm_df.copy()))
 
     monkeypatch.setattr(bikeneat, "_export_to_pbf", fake_export)
