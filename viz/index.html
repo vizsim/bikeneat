@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BikeNEAT — Radinfrastruktur Berlin</title>
+    <link href="https://unpkg.com/maplibre-gl@5.18.0/dist/maplibre-gl.css" rel="stylesheet" />
+    <link href="style.css" rel="stylesheet" />
+</head>
+<body>
+    <div id="map"></div>
+
+    <div class="panel">
+        <div class="legend">
+            <h3>BikeNEAT — Radinfrastruktur</h3>
+            <p class="panel-sub">Berlin, OSM-Stand 09.11.2025</p>
+
+            <div id="legend-items"></div>
+
+            <label class="legend-details-toggle">
+                <input type="checkbox" id="toggle-details" />
+                <span>Details: zugehörige <code>bicycle_infrastructure</code>-Werte</span>
+            </label>
+
+            <p class="legend-note">
+                Jede Straßenseite wird als eigene Linie gezeichnet, nach links bzw.
+                rechts versetzt. Zwei Linien heißt beidseitig, eine Linie nur auf
+                dieser Seite — und unterschiedliche Farben nebeneinander zeigen
+                unterschiedliche Führungsformen je Seite.
+            </p>
+
+            <p class="legend-note legend-note--muted">
+                Farben nach dem <em>details</em>-Style des
+                <a href="https://radverkehrsatlas.de" target="_blank" rel="noopener">Radverkehrsatlas</a>,
+                damit BikeNEAT und radinfra.de gegeneinander lesbar sind.
+                Klassifikation nach
+                <a href="https://doi.org/10.1007/s41651-026-00271-6" target="_blank" rel="noopener">Łukawska et al. 2026</a>.
+                Daten © OpenStreetMap-Mitwirkende (ODbL).
+            </p>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/maplibre-gl@5.18.0"></script>
+    <script src="https://unpkg.com/pmtiles@4.3.0/dist/pmtiles.js"></script>
+    <script type="module" src="script.js"></script>
+</body>
+</html>

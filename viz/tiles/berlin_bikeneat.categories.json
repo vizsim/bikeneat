@@ -1,0 +1,195 @@
+{
+  "source": "berlin_bikeneat.pmtiles",
+  "groups": {
+    "bicycle_way": {
+      "total": 16035,
+      "categories": [
+        {
+          "name": "bicycle_way_both",
+          "count": 13153,
+          "side": "beidseitig"
+        },
+        {
+          "name": "bicycle_way_right_no_left",
+          "count": 2472,
+          "side": "rechts"
+        },
+        {
+          "name": "bicycle_way_left_no_right",
+          "count": 191,
+          "side": "links"
+        },
+        {
+          "name": "bicycle_way_right_lane_left",
+          "count": 114,
+          "side": "rechts"
+        },
+        {
+          "name": "bicycle_way_left_lane_right",
+          "count": 80,
+          "side": "links"
+        },
+        {
+          "name": "bicycle_way_left_shared_right",
+          "count": 11,
+          "side": "links"
+        },
+        {
+          "name": "bicycle_way_right_shared_left",
+          "count": 5,
+          "side": "rechts"
+        },
+        {
+          "name": "bicycle_way_right_bus_left",
+          "count": 5,
+          "side": "rechts"
+        },
+        {
+          "name": "bicycle_way_left_bus_right",
+          "count": 4,
+          "side": "links"
+        }
+      ]
+    },
+    "bicycle_lane": {
+      "total": 6927,
+      "categories": [
+        {
+          "name": "bicycle_lane_right_no_left",
+          "count": 4339,
+          "side": "rechts"
+        },
+        {
+          "name": "bicycle_lane_both",
+          "count": 1959,
+          "side": "beidseitig"
+        },
+        {
+          "name": "bicycle_lane_left_no_right",
+          "count": 361,
+          "side": "links"
+        },
+        {
+          "name": "bicycle_way_right_lane_left",
+          "count": 114,
+          "side": "links"
+        },
+        {
+          "name": "bicycle_way_left_lane_right",
+          "count": 80,
+          "side": "rechts"
+        },
+        {
+          "name": "bicycle_lane_left_bus_right",
+          "count": 25,
+          "side": "links"
+        },
+        {
+          "name": "bicycle_lane_left_shared_right",
+          "count": 24,
+          "side": "links"
+        },
+        {
+          "name": "bicycle_lane_right_bus_left",
+          "count": 21,
+          "side": "rechts"
+        },
+        {
+          "name": "bicycle_lane_right_shared_left",
+          "count": 4,
+          "side": "rechts"
+        }
+      ]
+    },
+    "shared_way": {
+      "total": 2200,
+      "categories": [
+        {
+          "name": "shared_way_both",
+          "count": 2077,
+          "side": "beidseitig"
+        },
+        {
+          "name": "shared_way_right_no_left",
+          "count": 59,
+          "side": "rechts"
+        },
+        {
+          "name": "bicycle_lane_left_shared_right",
+          "count": 24,
+          "side": "rechts"
+        },
+        {
+          "name": "shared_way_left_no_right",
+          "count": 20,
+          "side": "links"
+        },
+        {
+          "name": "bicycle_way_left_shared_right",
+          "count": 11,
+          "side": "rechts"
+        },
+        {
+          "name": "bicycle_way_right_shared_left",
+          "count": 5,
+          "side": "links"
+        },
+        {
+          "name": "bicycle_lane_right_shared_left",
+          "count": 4,
+          "side": "links"
+        }
+      ]
+    },
+    "bus_lane": {
+      "total": 985,
+      "categories": [
+        {
+          "name": "bus_lane_right_no_left",
+          "count": 815,
+          "side": "rechts"
+        },
+        {
+          "name": "bus_lane_both",
+          "count": 84,
+          "side": "beidseitig"
+        },
+        {
+          "name": "bus_lane_left_no_right",
+          "count": 31,
+          "side": "links"
+        },
+        {
+          "name": "bicycle_lane_left_bus_right",
+          "count": 25,
+          "side": "rechts"
+        },
+        {
+          "name": "bicycle_lane_right_bus_left",
+          "count": 21,
+          "side": "links"
+        },
+        {
+          "name": "bicycle_way_right_bus_left",
+          "count": 5,
+          "side": "links"
+        },
+        {
+          "name": "bicycle_way_left_bus_right",
+          "count": 4,
+          "side": "rechts"
+        }
+      ]
+    },
+    "bicycle_road": {
+      "total": 738,
+      "categories": [
+        {
+          "name": "bicycle_road",
+          "count": 738,
+          "side": "ganze Fahrbahn"
+        }
+      ]
+    }
+  }
+}
