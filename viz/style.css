@@ -34,6 +34,54 @@ body {
     overflow-y: auto;
 }
 
+/* Shown while tiles are in flight. Most of the wait is the basemap rather than the
+   PMTiles archive, so this hangs off the map's own load state, not off our source. */
+.loading {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 13px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    font-size: 12px;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.loading.is-visible {
+    display: flex;
+}
+
+.loading-spinner {
+    width: 13px;
+    height: 13px;
+    flex: none;
+    border: 2px solid rgba(23, 78, 217, 0.25);
+    border-top-color: #174ed9;
+    border-radius: 50%;
+    animation: loading-spin 0.7s linear infinite;
+}
+
+@keyframes loading-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .loading-spinner {
+        animation: none;
+        border-top-color: #174ed9;
+    }
+}
+
 .legend {
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);

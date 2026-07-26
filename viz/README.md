@@ -266,6 +266,29 @@ swipe, or a distinct visual treatment for one of the layers.
 Note also that the overlay is current OSM data while the tiled BikeNEAT layer is a
 fixed extract (2026-07-25 for Berlin), so some differences are edits, not method.
 
+## Loading indicator
+
+A pill at the top of the map shows while tiles are in flight, bound to the map's own
+`movestart` / `dataloading` / `idle` events rather than to our source — most of the
+wait is the basemap decoding its tiles, not this archive. Showing is delayed by
+250 ms so a fast load does not flash it.
+
+Measured on this machine, jumping from z11 to z12 over Berlin: the archive itself is
+not the cost. With the openfreemap basemap the jump takes 5–8 s; with the same
+archive and layers on a blank style it takes 0.8 s, and the PMTiles range requests
+add up to under 200 ms. Leaner tiles would therefore not help much locally — see
+below for what the attributes cost — though they would in production, where the
+archive is served from raw.githubusercontent.com rather than localhost.
+
+## MapLibre version
+
+Pinned to 5.24.0. **6.0.0 is ESM-only** — the UMD bundle this page loads as a global
+(`unpkg.com/maplibre-gl@6.0.0/dist/maplibre-gl.js`) returns 404, only
+`maplibre-gl.mjs` is published — so moving to 6 means converting the script tags and
+`script.js` to ES module imports. Nothing in the 6.0 changelog addresses a problem
+here, and `hash: true` changed to `URLSearchParams` internally, which would alter the
+permalink format. Worth revisiting when something in 6.x is actually needed.
+
 ## Smoke test
 
 `window.bikeneatMap` is exposed for console access. To check a build:

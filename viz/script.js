@@ -443,6 +443,45 @@ function popupHtml(props, radinfraHref) {
     return `<h4>${name}</h4><table>${body}</table>${linkList}`;
 }
 
+// Most of the wait when zooming is the basemap decoding its tiles, not this archive,
+// so the indicator follows the map's own load state rather than our source.
+// `idle` is the definitive "nothing left to do" signal; areTilesLoaded() can be true
+// while glyphs or the style are still arriving.
+const LOADING_DELAY_MS = 250;
+
+function bindLoadingIndicator(map) {
+    const el = document.getElementById('loading');
+    if (!el) return;
+    let timer = null;
+    // Tracked rather than probed: at `movestart` the previous tiles are still
+    // loaded, so areTilesLoaded() reports true and the first seconds of the wait —
+    // measured at about two, before `dataloading` even fires — would show nothing.
+    let idle = true;
+
+    const show = () => {
+        idle = false;
+        if (timer !== null || el.classList.contains('is-visible')) return;
+        // Delayed, so a fast load never flashes the indicator for a moment.
+        timer = window.setTimeout(() => {
+            timer = null;
+            if (!idle) el.classList.add('is-visible');
+        }, LOADING_DELAY_MS);
+    };
+
+    const hide = () => {
+        idle = true;
+        if (timer !== null) {
+            window.clearTimeout(timer);
+            timer = null;
+        }
+        el.classList.remove('is-visible');
+    };
+
+    map.on('movestart', show);
+    map.on('dataloading', show);
+    map.on('idle', hide);
+}
+
 function main() {
     const protocol = new pmtiles.Protocol();
     maplibregl.addProtocol('pmtiles', protocol.tile);
@@ -459,6 +498,9 @@ function main() {
 
     // Exposed for console inspection and for the smoke test in viz/README.md.
     window.bikeneatMap = map;
+
+    // Bound outside the load handler so the first tile load is covered too.
+    bindLoadingIndicator(map);
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
     map.addControl(new maplibregl.ScaleControl({ maxWidth: 120 }));
