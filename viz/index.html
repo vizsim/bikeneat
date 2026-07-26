@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>BikeNEAT — Radinfrastruktur Berlin</title>
+    <title>BikeNEAT &amp; radinfra.de im Vergleich — Beispiel Berlin</title>
     <link href="https://unpkg.com/maplibre-gl@5.18.0/dist/maplibre-gl.css" rel="stylesheet" />
     <link href="style.css" rel="stylesheet" />
 </head>
@@ -12,15 +12,41 @@
 
     <div class="panel">
         <div class="legend">
-            <h3>BikeNEAT — Radinfrastruktur</h3>
-            <p class="panel-sub">Berlin, OSM-Stand 09.11.2025</p>
+            <h3>BikeNEAT &amp; radinfra.de im Vergleich</h3>
+            <p class="panel-sub">
+                Beispielkarte: dieselbe Stadt, zwei Klassifikationen. BikeNEAT aus
+                einem Berlin-Extrakt vom 09.11.2025, radinfra.de tagesaktuell.
+            </p>
 
-            <div id="legend-items"></div>
+            <p class="legend-credit">
+                <strong>BikeNEAT</strong> ist ein Framework von Mirosława Łukawska,
+                Emely Richter, Iwan Porojkow und Stefan Huber, TU Dresden.
+                <a href="https://doi.org/10.1007/s41651-026-00271-6" target="_blank" rel="noopener">Paper</a>
+                (Open Access, CC BY 4.0) ·
+                <a href="https://github.com/mirlu-tud/bikeneat" target="_blank" rel="noopener">Code</a>
+            </p>
 
-            <label class="legend-details-toggle">
-                <input type="checkbox" id="toggle-details" />
-                <span>Details: zugehörige <code>bicycle_infrastructure</code>-Werte</span>
-            </label>
+            <div class="legend-group">
+                <label class="legend-item legend-item--master">
+                    <span class="toggle-switch toggle-switch-sm">
+                        <input type="checkbox" id="toggle-bikeneat" checked />
+                        <span class="toggle-slider"></span>
+                    </span>
+                    <span><strong>BikeNEAT</strong></span>
+                </label>
+
+                <div id="legend-items" class="legend-sublist"></div>
+
+                <label class="legend-item legend-item--sub">
+                    <span class="toggle-switch toggle-switch-sm">
+                        <input type="checkbox" id="toggle-details" />
+                        <span class="toggle-slider"></span>
+                    </span>
+                    <span>Details: zugehörige <code>bicycle_infrastructure</code>-Werte</span>
+                </label>
+            </div>
+
+            <p class="legend-hint">Auf eine Kategorie klicken, um sie aus- und einzublenden.</p>
 
             <p class="legend-note">
                 Jede Straßenseite wird als eigene Linie gezeichnet, nach links bzw.
@@ -29,12 +55,46 @@
                 unterschiedliche Führungsformen je Seite.
             </p>
 
+            <div class="legend-section legend-group">
+                <label class="legend-item legend-item--master">
+                    <span class="toggle-switch toggle-switch-sm">
+                        <input type="checkbox" id="toggle-radinfra" />
+                        <span class="toggle-slider"></span>
+                    </span>
+                    <span><strong>Vergleich:</strong> radinfra.de</span>
+                </label>
+                <div id="radinfra-legend" class="legend-sublist"></div>
+                <p class="legend-note">
+                    Eigene Klassifikation von
+                    <a class="radinfra-deeplink" href="https://radinfra.de" target="_blank" rel="noopener">radinfra.de</a>,
+                    live von tilda-geo.de. Liegt über den
+                    BikeNEAT-Linien: ein Klick auf eine radinfra-Linie öffnet sie dort
+                    in einem neuen Tab, ein Klick auf eine BikeNEAT-Linie zeigt das
+                    Popup. Der Link oben öffnet den aktuellen Kartenausschnitt.
+                </p>
+            </div>
+
             <p class="legend-note legend-note--muted">
-                Farben nach dem <em>details</em>-Style des
-                <a href="https://radverkehrsatlas.de" target="_blank" rel="noopener">Radverkehrsatlas</a>,
-                damit BikeNEAT und radinfra.de gegeneinander lesbar sind.
-                Klassifikation nach
-                <a href="https://doi.org/10.1007/s41651-026-00271-6" target="_blank" rel="noopener">Łukawska et al. 2026</a>.
+                <strong>Die beiden Schemata entsprechen sich nicht eins zu eins.</strong>
+                Die BikeNEAT-Farben sind dem <em>details</em>-Style von
+                <a class="radinfra-deeplink" href="https://radinfra.de" target="_blank" rel="noopener">radinfra.de</a>
+                nachempfunden, damit man beide Ebenen nebeneinander lesen kann — nicht,
+                weil die Kategorien deckungsgleich wären. BikeNEAT ist hier zu fünf Farben
+                gruppiert; die Detailansicht zeigt, welche Werte dahinterstehen.
+            </p>
+
+            <p class="legend-note">
+                Weil radinfra.de tagesaktuell ist und der BikeNEAT-Layer den Stand
+                09.11.2025 hat, können Unterschiede auch von OSM-Bearbeitungen kommen
+                und nicht von der Klassifikation.
+            </p>
+
+            <p class="legend-note">
+                Diese Karte ist keine Veröffentlichung der BikeNEAT-Autor:innen. Bei
+                Verwendung bitte das Paper zitieren:
+                <a href="https://doi.org/10.1007/s41651-026-00271-6" target="_blank" rel="noopener">Łukawska,
+                Richter, Porojkow &amp; Huber (2026)</a>, <em>Journal of Geovisualization
+                and Spatial Analysis</em> 10:30.
                 Daten © OpenStreetMap-Mitwirkende (ODbL).
             </p>
         </div>

@@ -6,14 +6,42 @@ import {
     INFRA_SOURCE_LAYER,
     LINE_WIDTH,
     PMTILES_URL,
+    RADINFRA,
     SIDE_OFFSET_STOPS,
     STANDALONE_HIGHWAYS,
     categoryGroups,
     contextStyle,
+    hoverStyle,
     initialMapConfig,
+    radinfraLabel,
+    radinfraURL,
 } from './config.js';
 
 const SOURCE_ID = 'bikeneat';
+const HOVER_LAYER_ID = 'bikeneat-hover';
+const RADINFRA_HOVER_LAYER_ID = 'radinfra-hover';
+
+// Pointer events are bound to the map, not to a layer, and hit testing is a small
+// box rather than a point. A layer-scoped handler never fires for a line with
+// line-opacity 0, which is how the previous invisible hitarea layer was styled —
+// queryRenderedFeatures still returned it, so the layer looked fine while no
+// click or hover ever reached it. Querying the drawn layers directly also means
+// a hidden category cannot be hovered or clicked.
+const HIT_PADDING = 6;
+
+function hitBox(point) {
+    return [
+        [point.x - HIT_PADDING, point.y - HIT_PADDING],
+        [point.x + HIT_PADDING, point.y + HIT_PADDING],
+    ];
+}
+
+// bikeneat ids are numbers, radinfra ids strings like 'way/123', so each needs its
+// own "match nothing" sentinel.
+function setHoverFilter(map, layerId, id, sentinel) {
+    if (!map.getLayer(layerId)) return;
+    map.setFilter(layerId, ['==', ['get', 'id'], id ?? sentinel]);
+}
 
 // Positive offset is to the right of the way direction, matching the sense in
 // which OSM and BikeNEAT mean left/right.
@@ -46,7 +74,7 @@ function infraLayerSpecs() {
             type: 'line',
             source: SOURCE_ID,
             'source-layer': INFRA_SOURCE_LAYER,
-            // Deliberately no 'line-cap': 'round' — the atlas style sets round caps
+            // Deliberately no 'line-cap': 'round' — the tilda style sets round caps
             // only on its hitarea layer, and round caps would bleed past the ends
             // of short segments drawn side by side.
             layout: { visibility: 'visible' },
@@ -82,35 +110,71 @@ function infraLayerSpecs() {
     return specs;
 }
 
+// Both legends are built from this, so a BikeNEAT category row and a radinfra
+// category row are identical by construction rather than by matching CSS.
+function createCategoryRow({ label, color, title, onToggle }) {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'legend-item legend-item--toggle';
+    row.setAttribute('role', 'switch');
+    row.setAttribute('aria-checked', 'true');
+    if (title) row.title = title;
+
+    const swatch = document.createElement('span');
+    swatch.className = 'legend-color';
+    swatch.style.background = typeof color === 'string' ? color : '#888';
+
+    const text = document.createElement('span');
+    text.textContent = label;
+
+    row.append(swatch, text);
+    row.addEventListener('click', () => {
+        const next = row.getAttribute('aria-checked') !== 'true';
+        row.setAttribute('aria-checked', String(next));
+        onToggle(next);
+    });
+    return row;
+}
+
+// Visibility is the master switch AND the per-category state, so switching the
+// master back on restores whichever categories were left showing.
+const groupVisible = new Map(categoryGroups.map((group) => [group.id, true]));
+let bikeneatVisible = true;
+
+function applyBikeneatVisibility(map) {
+    for (const group of categoryGroups) {
+        const on = bikeneatVisible && groupVisible.get(group.id);
+        for (const id of layerIdsFor(group)) {
+            if (map.getLayer(id)) {
+                map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+            }
+        }
+    }
+    // The context layer and the hover halo follow the master only.
+    for (const id of ['bikeneat-context', HOVER_LAYER_ID]) {
+        if (map.getLayer(id)) {
+            map.setLayoutProperty(id, 'visibility', bikeneatVisible ? 'visible' : 'none');
+        }
+    }
+}
+
 function buildLegend(map) {
     const list = document.getElementById('legend-items');
     for (const group of categoryGroups) {
         const entry = document.createElement('div');
         entry.className = 'legend-entry';
 
-        const row = document.createElement('label');
-        row.className = 'legend-item';
-        row.title = `radverkehrsatlas: ${group.radinfra}`;
-
-        const box = document.createElement('input');
-        box.type = 'checkbox';
-        box.checked = true;
-        box.addEventListener('change', () => {
-            const visibility = box.checked ? 'visible' : 'none';
-            for (const id of layerIdsFor(group)) {
-                if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', visibility);
-            }
-        });
-
-        const swatch = document.createElement('span');
-        swatch.className = 'legend-color';
-        swatch.style.background = group.color;
-
-        const text = document.createElement('span');
-        text.textContent = group.label;
-
-        row.append(box, swatch, text);
-        entry.appendChild(row);
+        // Deliberately no tooltip naming a radinfra category: the colour is borrowed
+        // from there, but the two schemes do not correspond one to one, and a
+        // per-row label would claim they do. The legend note says it once instead.
+        entry.appendChild(createCategoryRow({
+            label: group.label,
+            color: group.color,
+            onToggle: (on) => {
+                groupVisible.set(group.id, on);
+                applyBikeneatVisibility(map);
+            },
+        }));
 
         const detail = document.createElement('ul');
         detail.className = 'legend-detail';
@@ -120,12 +184,135 @@ function buildLegend(map) {
         list.appendChild(entry);
     }
 
+    const master = document.getElementById('toggle-bikeneat');
+    master.addEventListener('change', () => {
+        bikeneatVisible = master.checked;
+        list.classList.toggle('legend-items--off', !bikeneatVisible);
+        applyBikeneatVisibility(map);
+    });
+
     const details = document.getElementById('toggle-details');
     const apply = () => list.classList.toggle('legend-items--details', details.checked);
     details.addEventListener('change', apply);
     apply();
 
     void fillCategoryDetail(list);
+}
+
+// Load the radinfra.de overlay from the tilda style file, adapting each layer to
+// our source id. Returns the added layer ids with their colours for the legend,
+// or an empty list if the style could not be read.
+async function addRadinfraLayers(map) {
+    let style;
+    try {
+        const response = await fetch(RADINFRA.styleURL);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        style = await response.json();
+    } catch (error) {
+        console.warn('radinfra style unavailable:', error);
+        return [];
+    }
+
+    const source = Object.values(style.sources ?? {})[0];
+    if (!source) {
+        console.warn('radinfra style has no source');
+        return [];
+    }
+    if (!map.getSource(RADINFRA.sourceId)) map.addSource(RADINFRA.sourceId, source);
+
+    // Hover halo for the overlay, added before its styled layers so it sits below.
+    // The source layer name comes from the style's own layers rather than being
+    // hardcoded, so it follows whatever tilda names it.
+    const sourceLayer = (style.layers ?? []).find((l) => l['source-layer'])?.['source-layer'];
+    map.addLayer({
+        id: RADINFRA_HOVER_LAYER_ID,
+        type: 'line',
+        source: RADINFRA.sourceId,
+        'source-layer': sourceLayer,
+        filter: ['==', ['get', 'id'], ''],
+        // Butt caps, not round: a round cap overshoots the end of each part by half
+        // the line width, so where a way arrives in several parts — across a tile
+        // boundary, or as an unmerged MultiLineString — the halos overlap and the
+        // translucency doubles up into a knot at every join.
+        layout: { 'line-cap': 'butt' },
+        paint: {
+            'line-color': hoverStyle.color,
+            'line-width': hoverStyle.width,
+            'line-opacity': hoverStyle.opacity,
+            'line-blur': 1,
+        },
+    });
+
+    const added = [];
+    for (const layer of style.layers ?? []) {
+        if (RADINFRA.skipLayerIds.includes(layer.id)) continue;
+        const spec = {
+            ...layer,
+            id: RADINFRA.layerPrefix + layer.id,
+            source: RADINFRA.sourceId,
+            layout: { ...(layer.layout ?? {}), visibility: 'none' },
+        };
+        map.addLayer(spec);
+        added.push({
+            id: spec.id,
+            label: radinfraLabel(layer.id),
+            color: layer.paint?.['line-color'],
+        });
+    }
+    return added;
+}
+
+function buildRadinfraLegend(map, layers) {
+    const container = document.getElementById('radinfra-legend');
+    const toggle = document.getElementById('toggle-radinfra');
+
+    if (!layers.length) {
+        toggle.disabled = true;
+        toggle.closest('.legend-item').title = 'tilda-Style nicht ladbar';
+        const note = document.createElement('p');
+        note.className = 'legend-note';
+        note.textContent = 'Overlay nicht verfügbar.';
+        container.appendChild(note);
+        return;
+    }
+
+    // Same master-AND-category model as BikeNEAT, so switching the overlay off and
+    // on again keeps whichever radinfra categories were deselected.
+    const layerVisible = new Map(layers.map((layer) => [layer.id, true]));
+    const apply = () => {
+        for (const layer of layers) {
+            if (!map.getLayer(layer.id)) continue;
+            const on = toggle.checked && layerVisible.get(layer.id);
+            map.setLayoutProperty(layer.id, 'visibility', on ? 'visible' : 'none');
+        }
+        if (map.getLayer(RADINFRA_HOVER_LAYER_ID)) {
+            map.setLayoutProperty(RADINFRA_HOVER_LAYER_ID, 'visibility',
+                toggle.checked ? 'visible' : 'none');
+        }
+    };
+    apply();
+
+    // A style's layer array runs bottom-to-top, since that is drawing order, which
+    // is the reverse of how radinfra.de lists the same categories in its own
+    // legend. Only the display order is reversed — the layers keep the z-order the
+    // style asked for.
+    for (const layer of [...layers].reverse()) {
+        container.appendChild(createCategoryRow({
+            label: layer.label,
+            color: layer.color,
+            onToggle: (on) => {
+                layerVisible.set(layer.id, on);
+                apply();
+            },
+        }));
+    }
+
+    // The list is only worth its vertical space while the overlay is on — with 13
+    // entries it otherwise pushes the rest of the legend off the panel.
+    toggle.addEventListener('change', () => {
+        container.classList.toggle('is-open', toggle.checked);
+        apply();
+    });
 }
 
 // Populate each legend entry with the bicycle_infrastructure values that feed it,
@@ -170,6 +357,45 @@ async function fillCategoryDetail(list) {
     }
 }
 
+// Keep every radinfra.de link in the legend pointing at whatever is currently on
+// screen, so clicking one opens the same place there rather than the front page.
+function bindRadinfraDeepLinks(map) {
+    const links = document.querySelectorAll('.radinfra-deeplink');
+    if (!links.length) return;
+    const update = () => {
+        const center = map.getCenter();
+        const href = radinfraURL({ zoom: map.getZoom(), lat: center.lat, lng: center.lng });
+        for (const link of links) link.href = href;
+    };
+    map.on('moveend', update);
+    update();
+}
+
+// radinfra ids identify a side of a way, not just the way: 'way/1460141762' but
+// also 'way/1460141762/cycleway/left'. The deep link only takes the OSM way.
+function osmWayId(radinfraId) {
+    const match = /^way\/(\d+)/.exec(String(radinfraId ?? ''));
+    return match ? match[1] : null;
+}
+
+// Tile geometry is clipped at tile edges, so this is the bounding box of the part
+// of the way in the tiles that are loaded, not necessarily of the whole way. Good
+// enough to frame it in radinfra.de.
+function featureBounds(geometry) {
+    if (!geometry) return null;
+    const lines = geometry.type === 'MultiLineString' ? geometry.coordinates : [geometry.coordinates];
+    let west = Infinity, south = Infinity, east = -Infinity, north = -Infinity;
+    for (const line of lines) {
+        for (const [lng, lat] of line) {
+            if (lng < west) west = lng;
+            if (lng > east) east = lng;
+            if (lat < south) south = lat;
+            if (lat > north) north = lat;
+        }
+    }
+    return Number.isFinite(west) ? [west, south, east, north] : null;
+}
+
 const groupLabels = new Map(categoryGroups.map((g) => [g.id, g.label]));
 
 function sideLabel(value) {
@@ -177,7 +403,7 @@ function sideLabel(value) {
     return groupLabels.get(value) ?? value;
 }
 
-function popupHtml(props) {
+function popupHtml(props, radinfraHref) {
     const category = props[CLASSIFICATION_FIELD] ?? '–';
     const name = props.name || 'ohne Namen';
     const standalone = STANDALONE_HIGHWAYS.includes(props.highway);
@@ -205,10 +431,16 @@ function popupHtml(props) {
     const body = rows
         .map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`)
         .join('');
-    const osm = props.id
-        ? `<a href="https://www.openstreetmap.org/way/${props.id}" target="_blank" rel="noopener">Way ${props.id} auf osm.org</a>`
-        : '';
-    return `<h4>${name}</h4><table>${body}</table>${osm}`;
+    const links = [];
+    if (props.id) {
+        links.push(`<a href="https://www.openstreetmap.org/way/${props.id}"
+            target="_blank" rel="noopener">Way ${props.id} auf osm.org</a>`);
+    }
+    if (radinfraHref) {
+        links.push(`<a href="${radinfraHref}" target="_blank" rel="noopener">bei radinfra.de ansehen</a>`);
+    }
+    const linkList = links.length ? `<p class="popup-links">${links.join('<br />')}</p>` : '';
+    return `<h4>${name}</h4><table>${body}</table>${linkList}`;
 }
 
 function main() {
@@ -234,6 +466,9 @@ function main() {
     map.on('load', () => {
         map.addSource(SOURCE_ID, { type: 'vector', url: PMTILES_URL });
 
+        // Only draws anything when the archive was built with --context; by default
+        // build_tiles.py drops the ways classified 'no' altogether. Harmless when
+        // the source layer is absent, and ready if a comparison view wants it.
         map.addLayer({
             id: 'bikeneat-context',
             type: 'line',
@@ -246,41 +481,109 @@ function main() {
             },
         });
 
-        const infraLayers = infraLayerSpecs();
-        for (const spec of infraLayers) map.addLayer(spec);
-
-        // Invisible wide line on top to make thin lines clickable, as the atlas
-        // style does with its hitarea layer.
-        const clickableIds = infraLayers.map((spec) => spec.id);
+        // Added before the category layers so the halo sits underneath them. The
+        // filter matches nothing until something is hovered.
         map.addLayer({
-            id: 'bikeneat-hitarea',
+            id: HOVER_LAYER_ID,
             type: 'line',
             source: SOURCE_ID,
             'source-layer': INFRA_SOURCE_LAYER,
-            layout: { 'line-cap': 'round' },
+            filter: ['==', ['get', 'id'], -1],
+            // Butt caps for the same reason as the radinfra halo: round caps
+            // overshoot each part and the overlap darkens at every join.
+            layout: { 'line-cap': 'butt' },
             paint: {
-                'line-opacity': 0,
-                'line-color': '#000000',
-                'line-width': ['interpolate', ['linear'], ['zoom'], 9, 4, 14, 10, 18, 14],
+                'line-color': hoverStyle.color,
+                'line-width': hoverStyle.width,
+                'line-opacity': hoverStyle.opacity,
+                'line-blur': 1,
             },
         });
 
+        const infraLayers = infraLayerSpecs();
+        for (const spec of infraLayers) map.addLayer(spec);
+
+        const bikeneatIds = infraLayers.map((spec) => spec.id);
+        let radinfraIds = [];
+
         buildLegend(map);
+
+        // Added last so the overlay draws on top of the BikeNEAT lines.
+        addRadinfraLayers(map).then((layers) => {
+            radinfraIds = layers.map((layer) => layer.id);
+            buildRadinfraLegend(map, layers);
+        });
 
         const popup = new maplibregl.Popup({ closeButton: true, maxWidth: '320px' });
 
-        map.on('click', 'bikeneat-hitarea', (event) => {
-            // Query the visible styled layers so a hidden group is not clickable.
-            const hits = map.queryRenderedFeatures(event.point, { layers: clickableIds });
-            if (!hits.length) return;
-            popup.setLngLat(event.lngLat).setHTML(popupHtml(hits[0].properties)).addTo(map);
+        bindRadinfraDeepLinks(map);
+
+        const present = (ids) => ids.filter((id) => map.getLayer(id));
+
+        function query(event, ids) {
+            const layers = present(ids);
+            return layers.length ? map.queryRenderedFeatures(hitBox(event.point), { layers }) : [];
+        }
+
+        // One hovered feature at a time across both datasets. Querying both layer
+        // sets in one call means the topmost drawn line wins, which is the overlay
+        // where it is switched on.
+        let hovered = null;
+        map.on('mousemove', (event) => {
+            const hits = query(event, [...radinfraIds, ...bikeneatIds]);
+            const top = hits[0] ?? null;
+            const key = top ? `${top.layer.id}:${top.properties.id}` : null;
+            map.getCanvas().style.cursor = top ? 'pointer' : '';
+            if (key === hovered) return;
+            hovered = key;
+
+            const isRadinfra = Boolean(top?.layer.id.startsWith(RADINFRA.layerPrefix));
+            setHoverFilter(map, HOVER_LAYER_ID,
+                isRadinfra ? null : top?.properties.id ?? null, -1);
+            setHoverFilter(map, RADINFRA_HOVER_LAYER_ID,
+                isRadinfra ? top?.properties.id ?? null : null, '');
         });
 
-        map.on('mouseenter', 'bikeneat-hitarea', () => {
-            map.getCanvas().style.cursor = 'pointer';
-        });
-        map.on('mouseleave', 'bikeneat-hitarea', () => {
+        map.on('mouseout', () => {
+            hovered = null;
             map.getCanvas().style.cursor = '';
+            setHoverFilter(map, HOVER_LAYER_ID, null, -1);
+            setHoverFilter(map, RADINFRA_HOVER_LAYER_ID, null, '');
+        });
+
+        // Queried the same way as the hover, so a click always acts on whatever the
+        // halo is highlighting. A BikeNEAT way opens the popup; a radinfra way opens
+        // radinfra.de itself, since this page has nothing to add about it.
+        map.on('click', (event) => {
+            const hits = query(event, [...radinfraIds, ...bikeneatIds]);
+            const top = hits[0] ?? null;
+            if (!top) {
+                popup.remove();
+                return;
+            }
+
+            const link = (wayId) => radinfraURL({
+                zoom: Math.max(map.getZoom(), 16),
+                lat: event.lngLat.lat,
+                lng: event.lngLat.lng,
+                wayId,
+                bounds: featureBounds(top.geometry),
+            });
+
+            if (top.layer.id.startsWith(RADINFRA.layerPrefix)) {
+                const wayId = osmWayId(top.properties.id);
+                window.open(wayId ? link(wayId) : radinfraURL({
+                    zoom: map.getZoom(),
+                    lat: event.lngLat.lat,
+                    lng: event.lngLat.lng,
+                }), '_blank', 'noopener');
+                return;
+            }
+
+            const href = top.properties.id && featureBounds(top.geometry)
+                ? link(top.properties.id)
+                : null;
+            popup.setLngLat(event.lngLat).setHTML(popupHtml(top.properties, href)).addTo(map);
         });
     });
 

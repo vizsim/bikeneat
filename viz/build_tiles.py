@@ -10,17 +10,11 @@ Two things happen here beyond plain tiling:
    on the right and a lane on the left); resolving that here keeps the parsing
    testable instead of pushing it into MapLibre filter expressions.
 
-2. The output holds two layers, because ~88 % of classified ways carry no
-   cycling infrastructure and would otherwise dominate the archive:
-
-     bikeneat  the classified infrastructure, full attributes, from --min-zoom
-     context   the remaining road network, geometry plus highway only,
-               coalesced, from --context-min-zoom
-
-   For Berlin that is ~16 MB instead of 55.7 MB for a flat single-layer archive.
-   The saving comes from the attributes, not the geometry: 'id', 'name' and
-   'length' are unique per feature, so they cannot be coalesced and cost roughly
-   38 MB across the 190k context ways that do not need them.
+2. Ways classified 'no' are dropped. They are ~88 % of the classified network and
+   the map does not draw them, so carrying them would only inflate the archive —
+   for Berlin, from about 8 MB to 55.7 MB. Pass --context to keep them as a
+   separate, coalesced layer holding geometry and highway only; that is the form
+   a comparison view would want, to show where BikeNEAT found nothing.
 """
 
 import argparse
@@ -30,6 +24,8 @@ from pathlib import Path
 
 import geopandas as gpd
 from freestiler import FreestileLayer, freestile, freestile_layer
+from shapely.geometry import LineString
+from shapely.ops import linemerge
 
 NO_INFRA = "no"
 BICYCLE_ROAD = "bicycle_road"
@@ -85,6 +81,32 @@ def split_sides(category):
         return sides["left"], sides["right"]
 
     raise ValueError(f"unrecognised BikeNEAT category: {category!r}")
+
+
+def merge_way_geometry(geom):
+    """Join a way's segments into a single LineString where that is provably safe.
+
+    pyrosm hands back each way as a MultiLineString split at its nodes — 19,838 of
+    26,592 classified Berlin ways have more than one part. Drawn with a wide line
+    every part boundary overlaps its neighbour, which shows up as a knot at every
+    node once the line is semi-transparent, and it costs tile size for nothing.
+
+    Direction is the catch: BikeNEAT's left/right is relative to the OSM way
+    direction, and the map turns that into a line offset whose sign follows the
+    rendered line. linemerge() is free to reverse parts to make them contiguous, so
+    a merge that reordered them could silently swap the two sides. The merged line
+    is therefore only accepted when it still starts where the first part started and
+    ends where the last one ended; otherwise the original is kept.
+    """
+    if geom is None or geom.is_empty or not hasattr(geom, "geoms") or len(geom.geoms) < 2:
+        return geom
+    merged = linemerge(geom)
+    if not isinstance(merged, LineString):
+        return geom
+    first, last = geom.geoms[0], geom.geoms[-1]
+    if merged.coords[0] == first.coords[0] and merged.coords[-1] == last.coords[-1]:
+        return merged
+    return geom
 
 
 def write_category_index(infra, out_path):
@@ -147,10 +169,10 @@ def main():
     parser.add_argument("-o", "--out", required=True, help="output .pmtiles path")
     parser.add_argument("--min-zoom", type=int, default=8)
     parser.add_argument("--max-zoom", type=int, default=14)
+    parser.add_argument("--context", action="store_true",
+                        help="also tile the ways classified 'no' as a context layer")
     parser.add_argument("--context-min-zoom", type=int, default=11,
-                        help="zoom at which the unclassified road network appears")
-    parser.add_argument("--no-context", action="store_true",
-                        help="omit the context layer entirely (smallest output)")
+                        help="zoom at which the context layer appears, with --context")
     args = parser.parse_args()
 
     t0 = time.perf_counter()
@@ -168,6 +190,14 @@ def main():
 
     geom = gdf.geometry.name
     infra = gdf[gdf["bicycle_infrastructure"] != NO_INFRA].copy()
+
+    multipart_before = int(infra.geometry.map(
+        lambda g: hasattr(g, "geoms") and len(g.geoms) > 1).sum())
+    infra[infra.geometry.name] = infra.geometry.map(merge_way_geometry)
+    multipart_after = int(infra.geometry.map(
+        lambda g: hasattr(g, "geoms") and len(g.geoms) > 1).sum())
+    print(f"merged way segments: {multipart_before - multipart_after} of {multipart_before}"
+          f" multipart geometries joined, {multipart_after} left split")
 
     sides = {c: split_sides(c) for c in infra["bicycle_infrastructure"].unique()}
     infra["infra_left"] = infra["bicycle_infrastructure"].map(lambda c: sides[c][0])
@@ -198,11 +228,14 @@ def main():
     print(f"          left  {infra['infra_left'].notna().sum()},"
           f" right {infra['infra_right'].notna().sum()}")
 
-    if not args.no_context:
+    dropped = int((gdf["bicycle_infrastructure"] == NO_INFRA).sum())
+    if args.context:
         context = subset(gdf[gdf["bicycle_infrastructure"] == NO_INFRA], CONTEXT_COLUMNS)
         layers["context"] = freestile_layer(context, min_zoom=args.context_min_zoom)
         print(f"context : {len(context)} features, {len(context.columns) - 1} attributes"
               f" (from zoom {args.context_min_zoom})")
+    else:
+        print(f"skipping {dropped} ways classified '{NO_INFRA}' (pass --context to keep them)")
 
     sidecar = write_category_index(infra, out)
 

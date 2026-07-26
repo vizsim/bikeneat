@@ -53,6 +53,23 @@ body {
     color: var(--text-muted);
 }
 
+/* Credit for the framework this map visualises, kept near the title rather than
+   buried in the footnotes. */
+.legend-credit {
+    margin: 0 0 12px;
+    padding: 8px 10px;
+    border-left: 3px solid #fb923c;
+    background: rgba(251, 146, 60, 0.09);
+    border-radius: 0 4px 4px 0;
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
+.legend-credit a {
+    color: inherit;
+    font-weight: 500;
+}
+
 .legend-item {
     display: flex;
     align-items: center;
@@ -62,10 +79,142 @@ body {
     cursor: pointer;
 }
 
-.legend-item input {
-    margin: 0;
+.legend-item--master {
+    padding-bottom: 6px;
+}
+
+/* Indented block of category rows belonging to the switch above it. */
+.legend-sublist {
+    margin-left: 22px;
+}
+
+.legend-item--sub {
+    margin-left: 22px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* Category rows are buttons, so the browser defaults have to be undone. Used by
+   both legends via createCategoryRow(), which is what keeps them the same size. */
+.legend-item--toggle {
+    /* Negative margin plus matching padding lets the hover highlight bleed past
+       the text without shifting the row's alignment. */
+    width: calc(100% + 12px);
+    margin-left: -6px;
+    padding: 3px 6px;
+    border: 0;
+    background: none;
+    font-family: inherit;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: inherit;
+    text-align: left;
+    gap: 7px;
+    border-radius: 4px;
+    transition: background-color 0.12s, opacity 0.15s;
+}
+
+.legend-item--toggle .legend-color {
+    width: 16px;
+    height: 3px;
+}
+
+.legend-item--toggle:hover {
+    background-color: rgba(251, 146, 60, 0.18);
+}
+
+.legend-item--toggle[aria-checked="false"] {
+    opacity: 0.35;
+}
+
+.legend-item--toggle[aria-checked="false"] .legend-color {
+    background: var(--text-muted) !important;
+}
+
+.legend-item--toggle:focus-visible {
+    outline: 2px solid #174ed9;
+    outline-offset: 1px;
+}
+
+/* Master switch off: the category rows are inert until it is back on. */
+.legend-items--off {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.legend-hint {
+    margin: 4px 0 0;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* Switch styling matched to vizsim/mapillary_coverage_analysis. */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
     cursor: pointer;
-    flex: none;
+    inset: 0;
+    background-color: #ccc;
+    transition: 0.3s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background-color: #174ed9;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
+.toggle-switch input:focus-visible + .toggle-slider {
+    outline: 2px solid #174ed9;
+    outline-offset: 2px;
+}
+
+.toggle-switch.toggle-switch-sm {
+    width: 32px;
+    height: 18px;
+}
+
+.toggle-switch.toggle-switch-sm .toggle-slider {
+    border-radius: 18px;
+}
+
+.toggle-switch.toggle-switch-sm .toggle-slider:before {
+    width: 12px;
+    height: 12px;
+    left: 3px;
+    bottom: 3px;
+}
+
+.toggle-switch.toggle-switch-sm input:checked + .toggle-slider:before {
+    transform: translateX(14px);
 }
 
 .legend-color {
@@ -75,10 +224,12 @@ body {
     flex: none;
 }
 
-/* Category lists stay collapsed until the details toggle is on. */
+/* Category lists stay collapsed until the details toggle is on. The left margin
+   lines them up under the row label, past the 16px swatch and 7px gap; the
+   surrounding .legend-sublist already supplies the outer indent. */
 .legend-detail {
     display: none;
-    margin: 2px 0 8px 30px;
+    margin: 2px 0 8px 23px;
     padding: 0;
     list-style: none;
 }
@@ -117,22 +268,25 @@ body {
     padding-bottom: 2px;
 }
 
-.legend-details-toggle {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 8px;
-    padding-top: 8px;
+.legend-section {
+    margin-top: 10px;
+    padding-top: 10px;
     border-top: 1px solid var(--panel-border);
-    font-size: 12px;
-    color: var(--text-muted);
-    cursor: pointer;
 }
 
-.legend-details-toggle input {
+/* Collapsed until the overlay is switched on. */
+#radinfra-legend {
+    display: none;
+}
+
+#radinfra-legend.is-open {
+    display: block;
+}
+
+.popup-links {
     margin: 0;
-    cursor: pointer;
-    flex: none;
+    font-size: 12px;
+    line-height: 1.6;
 }
 
 .popup-hint {
@@ -153,6 +307,22 @@ body {
 .legend-note--muted {
     padding-top: 10px;
     border-top: 1px solid var(--panel-border);
+}
+
+/* Links anywhere in the legend, and in the popup, get the same orange hover tint
+   as the category rows. Inline so the highlight hugs the text rather than the
+   whole line of the paragraph it sits in. */
+.legend a,
+.maplibregl-popup-content a {
+    border-radius: 3px;
+    padding: 1px 3px;
+    margin: 0 -3px;
+    transition: background-color 0.12s;
+}
+
+.legend a:hover,
+.maplibregl-popup-content a:hover {
+    background-color: rgba(251, 146, 60, 0.28);
 }
 
 .legend-note a {
