@@ -37,7 +37,7 @@ extract:
 | --- | --- |
 | `['area'] not found in axis` | `pyrosm` 0.12 no longer returns an `area` column; it is now only used internally to decide polygon vs. linestring. The column was in a hardcoded drop list. |
 | PBF export silently skipped | `_export_to_pbf` built its output path as `'bikeneat_' + input_pbf`, which yields `bikeneat_data/raw/x.pbf` — a nonexistent directory — for any input in a subfolder. The surrounding `except` swallowed it as a warning. |
-| `the JSON object must be str, bytes or bytearray, not float` | `pyrosm` leaves `tags` as `NaN` for ways with no tags beyond the standard columns, and `json.loads` was applied unconditionally. Affects 235 of 216,398 ways in Berlin and **none** in the Wedel sample, so it only appears at scale. |
+| `the JSON object must be str, bytes or bytearray, not float` | `pyrosm` leaves `tags` as `NaN` for ways with no tags beyond the standard columns, and `json.loads` was applied unconditionally. Affects 235 of 237,291 ways in Berlin and **none** in the Wedel sample, so it only appears at scale. |
 | PBF export failed on every repeated run | `osmium.SimpleWriter` refuses to open an existing file, so `--export-pbf` only ever worked once per output path. Now opened with `overwrite=True`. |
 
 The `NaN` tags case is covered by a regression test
@@ -52,15 +52,16 @@ failed run therefore looks like a successful one unless the caller checks the re
 Measured on an AMD Ryzen 7 PRO 8840HS (8 cores), Python 3.12.3, `pyrosm` 0.12.0,
 `geopandas` 1.1.4, `pandas` 3.0.5, GDAL 3.12.4. Single run per configuration, so expect a few
 percent variance. Classification was timed once per region; both formats were then written
-from the same in-memory GeoDataFrame to isolate the export cost.
+from the same in-memory GeoDataFrame to isolate the export cost. Berlin is the Geofabrik
+extract of 2026-07-25.
 
 | Region | PBF | Ways | Classification | Peak RSS |
 | --- | --- | --- | --- | --- |
-| Wedel | 1.6 MB | 18,146 | 4.5 s | 350 MB |
-| Berlin | 94.6 MB | 216,398 | 116.9 s | 7.8 GB |
+| Wedel | 1.6 MB | 18,146 | 4.3 s | 351 MB |
+| Berlin | 98.7 MB | 237,291 | 130.0 s | 8.6 GB |
 
 Runtime scales roughly with way count; memory is the resource to watch, since the outer merge
-of the cycling and driving networks is held in full. Berlin peaks near 8 GB from a 95 MB
+of the cycling and driving networks is held in full. Berlin peaks near 9 GB from a 99 MB
 extract — a whole-country extract will not fit on a typical laptop without tiling the input.
 
 Classification results:
@@ -68,18 +69,18 @@ Classification results:
 | Region | Ways | With cycling infrastructure | Share |
 | --- | --- | --- | --- |
 | Wedel | 18,146 | 1,203 | 6.6 % |
-| Berlin | 216,398 | 26,592 | 12.3 % |
+| Berlin | 237,291 | 28,695 | 12.1 % |
 
 ### GeoPackage vs. GeoParquet
 
 | Region | Format | Write | Read | Size |
 | --- | --- | --- | --- | --- |
-| Wedel | GeoPackage | 0.44 s | 0.30 s | 8.5 MB |
-| Wedel | GeoParquet | 0.12 s | 0.19 s | 2.4 MB |
-| Berlin | GeoPackage | 5.92 s | 3.30 s | 120.0 MB |
-| Berlin | GeoParquet | 0.64 s | 0.52 s | 27.2 MB |
+| Wedel | GeoPackage | 0.57 s | 0.28 s | 8.5 MB |
+| Wedel | GeoParquet | 0.09 s | 0.14 s | 2.4 MB |
+| Berlin | GeoPackage | 5.76 s | 3.70 s | 134.7 MB |
+| Berlin | GeoParquet | 0.71 s | 0.67 s | 29.6 MB |
 
-At Berlin size GeoParquet is 4.4× smaller, writes 9.3× faster and reads 6.3× faster. Both
+At Berlin size GeoParquet is 4.6× smaller, writes 8.1× faster and reads 5.5× faster. Both
 roundtrip without row loss. The gap widens with size, because GeoPackage is SQLite and pays
 per-row insert overhead where Parquet writes columnar batches.
 
@@ -90,10 +91,10 @@ accessed from Windows. GeoParquet has no such constraint.
 
 ```bash
 # GeoPackage for QGIS
-uv run python run_bikeneat.py data/raw/berlin-251109.osm.pbf -o data/results/berlin.gpkg
+uv run python run_bikeneat.py data/raw/berlin-260725.osm.pbf -o data/results/berlin.gpkg
 
 # GeoParquet for analysis, plus indicator columns and a tagged PBF
-uv run python run_bikeneat.py data/raw/berlin-251109.osm.pbf \
+uv run python run_bikeneat.py data/raw/berlin-260725.osm.pbf \
     -o data/results/berlin.parquet --indicators --export-pbf
 ```
 

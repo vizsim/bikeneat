@@ -2,7 +2,7 @@
 
 A sample map for comparing the BikeNEAT classification with
 [radinfra.de](https://radinfra.de) (tilda) — two classifications of OpenStreetMap,
-side by side. BikeNEAT is tiled from a fixed extract (Berlin, 2025-11-09),
+side by side. BikeNEAT is tiled from a fixed extract (Berlin, 2026-07-25),
 radinfra.de is served live from tilda-geo.de and is therefore current — so a
 difference between the two can be an OSM edit rather than a difference in method.
 
@@ -10,15 +10,13 @@ BikeNEAT itself is the work of Mirosława Łukawska, Emely Richter, Iwan Porojko
 Stefan Huber at TU Dresden, published open access under CC BY 4.0:
 [Journal of Geovisualization and Spatial Analysis 10:30
 (2026)](https://doi.org/10.1007/s41651-026-00271-6), code at
-[mirlu-tud/bikeneat](https://github.com/mirlu-tud/bikeneat). The page credits them
-next to its title rather than in a footnote, and asks that the paper be cited rather
-than this map.
+[mirlu-tud/bikeneat](https://github.com/mirlu-tud/bikeneat).
 
 ## Pipeline
 
 ```bash
 # 1. classify to GeoParquet
-uv run python run_bikeneat.py data/raw/berlin-251109.osm.pbf \
+uv run python run_bikeneat.py data/raw/berlin-260725.osm.pbf \
     -o data/results/berlin_bikeneat.parquet
 
 # 2. tile to PMTiles
@@ -36,27 +34,27 @@ returns the whole file with status 200. In production this does not come up,
 because raw.githubusercontent.com honours ranges.
 
 Ways classified `no` are dropped at build time — they are ~88 % of the network
-and the map does not draw them. For Berlin that is 6.9 MB instead of 55.7 MB, and
-1.3 s of tiling instead of 6.8 s. Pass `--context` to keep them as a separate,
+and the map does not draw them. For Berlin the archive is 7.4 MB and takes 1.5 s to
+tile; with `--context` it is 15.1 MB and 6.3 s. Pass `--context` to keep them as a separate,
 coalesced layer holding geometry and highway only; the page already has a
 `bikeneat-context` layer that draws it when present.
 
 ## Way geometry
 
-pyrosm hands back each way as a MultiLineString split at its nodes — 19,838 of the
-26,592 classified Berlin ways have more than one part, some more than twenty.
-`merge_way_geometry()` joins them back into one LineString, which took the archive
-from 8.4 MB to 6.9 MB and removed a rendering artifact: a wide semi-transparent
-line drawn over abutting parts doubles up at every join, so the hover halo showed
-a knot at each node.
+pyrosm hands back each way as a MultiLineString split at its nodes — 21,098 of the
+28,695 classified Berlin ways have more than one part, one of them 115.
+`merge_way_geometry()` joins them back into one LineString, which takes the archive
+from 9.0 MB to 7.4 MB and removes a rendering artifact: a wide semi-transparent line
+drawn over abutting parts doubles up at every join, so the hover halo showed a knot
+at each node.
 
 Direction is the catch. BikeNEAT's left/right is relative to the OSM way direction,
 and the map turns that into a `line-offset` whose sign follows the rendered line, so
 a merge that reversed or reordered parts would silently swap the two sides.
 `linemerge()` is allowed to do exactly that. The merged line is therefore only
 accepted when it still starts where the first part started and ends where the last
-one ended. For Berlin that keeps 19,819 merges and leaves 19 geometries split — 16
-reordered, 3 genuinely disconnected — which the build reports.
+one ended. For the July 2026 Berlin extract that keeps 21,081 merges and leaves 17
+geometries split, which the build reports.
 
 Note that `queryRenderedFeatures` reports line geometry split into segments
 regardless; that is MapLibre reconstructing the query result, not what is stored.
@@ -124,12 +122,13 @@ there is no carriageway for "left" and "right" to refer to:
   (`centered: true` in the config).
 - **`highway=cycleway`, `path`, `track` and `pedestrian`** — the way's own
   geometry *is* the infrastructure, so an offset pair would read as two separate
-  paths (`STANDALONE_HIGHWAYS`). In the Berlin extract cycleway (10,787), path
-  (2,500) and track (164) carry no asymmetric or one-sided category at all, so
-  collapsing their sides loses nothing. `pedestrian` has 3 ways whose sides
-  differ; those are drawn as one line too, so their asymmetry is not visible and
-  the higher-grade form is what shows. `build_tiles.py` prints a warning naming
-  exactly those cases on every build, so the collapse cannot go unnoticed.
+  paths (`STANDALONE_HIGHWAYS`). In the July 2026 Berlin extract cycleway (11,129),
+  path (2,618) and track (162) carry no way whose two sides differ, so collapsing
+  them loses nothing; `pedestrian` (184) has one. That one is drawn as a single line
+  too, so its asymmetry is not visible and the higher-grade form is what shows.
+  `build_tiles.py` prints a warning naming exactly those cases on every build, so
+  the collapse cannot go unnoticed — the count is data-dependent and will move with
+  the extract.
 
 The popup notes this case rather than showing left/right rows that would not mean
 anything.
@@ -265,7 +264,7 @@ does not, but a real side-by-side comparison needs either two synchronised maps,
 swipe, or a distinct visual treatment for one of the layers.
 
 Note also that the overlay is current OSM data while the tiled BikeNEAT layer is a
-fixed extract (2025-11-09 for Berlin), so some differences are edits, not method.
+fixed extract (2026-07-25 for Berlin), so some differences are edits, not method.
 
 ## Smoke test
 

@@ -2,41 +2,41 @@
   "source": "berlin_bikeneat.pmtiles",
   "groups": {
     "bicycle_way": {
-      "total": 16035,
+      "total": 17288,
       "categories": [
         {
           "name": "bicycle_way_both",
-          "count": 13153,
+          "count": 13789,
           "side": "beidseitig"
         },
         {
           "name": "bicycle_way_right_no_left",
-          "count": 2472,
+          "count": 2975,
           "side": "rechts"
         },
         {
           "name": "bicycle_way_left_no_right",
-          "count": 191,
+          "count": 245,
           "side": "links"
         },
         {
           "name": "bicycle_way_right_lane_left",
-          "count": 114,
+          "count": 143,
           "side": "rechts"
         },
         {
           "name": "bicycle_way_left_lane_right",
-          "count": 80,
+          "count": 104,
           "side": "links"
         },
         {
           "name": "bicycle_way_left_shared_right",
-          "count": 11,
+          "count": 17,
           "side": "links"
         },
         {
           "name": "bicycle_way_right_shared_left",
-          "count": 5,
+          "count": 6,
           "side": "rechts"
         },
         {
@@ -52,121 +52,111 @@
       ]
     },
     "bicycle_lane": {
-      "total": 6927,
+      "total": 7494,
       "categories": [
         {
           "name": "bicycle_lane_right_no_left",
-          "count": 4339,
+          "count": 4689,
           "side": "rechts"
         },
         {
           "name": "bicycle_lane_both",
-          "count": 1959,
+          "count": 2072,
           "side": "beidseitig"
         },
         {
           "name": "bicycle_lane_left_no_right",
-          "count": 361,
+          "count": 398,
           "side": "links"
         },
         {
           "name": "bicycle_way_right_lane_left",
-          "count": 114,
+          "count": 143,
           "side": "links"
         },
         {
           "name": "bicycle_way_left_lane_right",
-          "count": 80,
+          "count": 104,
           "side": "rechts"
         },
         {
-          "name": "bicycle_lane_left_bus_right",
-          "count": 25,
+          "name": "bicycle_lane_left_shared_right",
+          "count": 47,
           "side": "links"
         },
         {
-          "name": "bicycle_lane_left_shared_right",
-          "count": 24,
+          "name": "bicycle_lane_left_bus_right",
+          "count": 26,
           "side": "links"
         },
         {
           "name": "bicycle_lane_right_bus_left",
-          "count": 21,
-          "side": "rechts"
-        },
-        {
-          "name": "bicycle_lane_right_shared_left",
-          "count": 4,
+          "count": 15,
           "side": "rechts"
         }
       ]
     },
     "shared_way": {
-      "total": 2200,
+      "total": 2291,
       "categories": [
         {
           "name": "shared_way_both",
-          "count": 2077,
+          "count": 2122,
           "side": "beidseitig"
         },
         {
           "name": "shared_way_right_no_left",
-          "count": 59,
+          "count": 73,
           "side": "rechts"
         },
         {
           "name": "bicycle_lane_left_shared_right",
-          "count": 24,
+          "count": 47,
           "side": "rechts"
         },
         {
           "name": "shared_way_left_no_right",
-          "count": 20,
+          "count": 26,
           "side": "links"
         },
         {
           "name": "bicycle_way_left_shared_right",
-          "count": 11,
+          "count": 17,
           "side": "rechts"
         },
         {
           "name": "bicycle_way_right_shared_left",
-          "count": 5,
-          "side": "links"
-        },
-        {
-          "name": "bicycle_lane_right_shared_left",
-          "count": 4,
+          "count": 6,
           "side": "links"
         }
       ]
     },
     "bus_lane": {
-      "total": 985,
+      "total": 1089,
       "categories": [
         {
           "name": "bus_lane_right_no_left",
-          "count": 815,
+          "count": 918,
           "side": "rechts"
         },
         {
           "name": "bus_lane_both",
-          "count": 84,
+          "count": 101,
           "side": "beidseitig"
         },
         {
-          "name": "bus_lane_left_no_right",
-          "count": 31,
-          "side": "links"
-        },
-        {
           "name": "bicycle_lane_left_bus_right",
-          "count": 25,
+          "count": 26,
           "side": "rechts"
         },
         {
+          "name": "bus_lane_left_no_right",
+          "count": 20,
+          "side": "links"
+        },
+        {
           "name": "bicycle_lane_right_bus_left",
-          "count": 21,
+          "count": 15,
           "side": "links"
         },
         {
@@ -182,11 +172,11 @@
       ]
     },
     "bicycle_road": {
-      "total": 738,
+      "total": 900,
       "categories": [
         {
           "name": "bicycle_road",
-          "count": 738,
+          "count": 900,
           "side": "ganze Fahrbahn"
         }
       ]
