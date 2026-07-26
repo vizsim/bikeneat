@@ -72,6 +72,27 @@ def test_classify_default_output_has_classification_column(bikeneat, monkeypatch
     assert len(result) == 5
 
 
+def test_prepare_way_tolerates_missing_tags(bikeneat):
+    # pyrosm leaves 'tags' as NaN for ways that carry no tags beyond the standard
+    # columns; json.loads must not be applied to those.
+    gdf = gpd.GeoDataFrame(
+        [
+            {"id": 1, "tags": '{"highway":"cycleway"}',
+             "geometry": LineString([(0, 0), (1, 0)])},
+            {"id": 2, "tags": float("nan"),
+             "geometry": LineString([(0, 0), (1, 0)])},
+        ],
+        geometry="geometry",
+    )
+
+    prepared = bikeneat._prepare_way(gdf)
+
+    assert len(prepared) == 2
+    assert prepared[0]["highway"] == "cycleway"
+    # the untagged way must still classify, and as no infrastructure
+    assert bikeneat.set_value(prepared[1], single=True) == "no"
+
+
 def test_classify_single_true_returns_single_categories(bikeneat, monkeypatch):
     monkeypatch.setattr(bikeneat.pyrosm, "OSM", FakeOSM)
 

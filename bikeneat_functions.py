@@ -147,7 +147,9 @@ def _prepare_way(way_dict):
     if isinstance(way_dict, gpd.GeoDataFrame):
         if 'tags' in way_dict.columns:
             way_gdf = way_dict
-            way_gdf['tags'] = way_gdf['tags'].apply(json.loads)
+            # ways carrying no extra tags have NaN here, not a JSON string
+            way_gdf['tags'] = way_gdf['tags'].apply(
+                lambda t: json.loads(t) if isinstance(t, str) else {})
             way_gdf.reset_index(drop=True, inplace=True)
             way_n = pd.concat([way_gdf, pd.json_normalize(way_gdf['tags'])], axis=1)
             way_n = way_n[way_n.columns.intersection(OSM_KEYS)]
@@ -539,7 +541,9 @@ def _export_to_pbf(input_pbf, osm_df, output_dir=None):
 
             def relation(self, r):
                 self.writer.add_relation(r)
-        writer = osmium.SimpleWriter(output_pbf)
+        # without overwrite the writer refuses to start once the file exists,
+        # so a repeated run would never update the export
+        writer = osmium.SimpleWriter(output_pbf, overwrite=True)
         handler = TagWriter(writer, way_to_infra)
         handler.apply_file(input_pbf, locations=True, idx='flex_mem')
         writer.close()
