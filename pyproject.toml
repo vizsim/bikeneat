@@ -1,0 +1,22 @@
+[project]
+name = "bikeneat"
+version = "0.1.0"
+description = "A framework for classifying bicycle infrastructure in OpenStreetMap"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "pyrosm>=0.12.0",
+    "geopandas>=1.0",
+    "pandas>=2.0",
+    "shapely>=2.0",
+    "tqdm>=4.66",
+    "osmium>=4.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+python_files = ["bikeneat_tests.py"]

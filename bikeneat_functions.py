@@ -556,7 +556,7 @@ def classify_with_bikeneat(pbf_path, single=False, aggregated=True, output_arg={
         osm.columns = osm.columns.str.rstrip('_x')
 
         osm_mask = ['id', 'osm_type', 'geometry', 'area']
-        mask = osm.drop(columns=osm_mask).notna().any(axis=1)
+        mask = osm.drop(columns=osm_mask, errors='ignore').notna().any(axis=1)
         osm_df = osm[mask]
 
         # Extract cycling relation membership from PBF file if provided
