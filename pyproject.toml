@@ -18,6 +18,9 @@ dependencies = [
 test = [
     "pytest>=8.0",
 ]
+viz = [
+    "freestiler>=0.2",
+]
 
 [tool.pytest.ini_options]
 python_files = ["bikeneat_tests.py"]
