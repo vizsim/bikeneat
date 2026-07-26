@@ -101,3 +101,25 @@ uv run python run_bikeneat.py data/raw/berlin-251109.osm.pbf \
 
 - **Łukawska, M., Richter, E., Porojkow, I., & Huber, S. (2026)**: *BikeNEAT: a framework for classifying bicycle infrastructure in OpenStreetMap.* Journal of Geovisualization and Spatial Analysis, 30. https://doi.org/10.1007/s41651-026-00271-6.
 
+## Licence and attribution
+
+The upstream repository carries no licence file. The paper describes the implementation as
+"the open-source code" and states that it is publicly available on GitHub, and the article
+itself is published under CC BY 4.0. I have read that as intent for reuse and am building on
+it here in good faith — non-commercially, with attribution, and with the classification logic
+itself unchanged.
+
+To be explicit about what that does and does not mean:
+
+- Copyright in the original code remains with the authors (TU Dresden). No rights to it are
+  claimed here.
+- This fork deliberately adds no licence file of its own, since it cannot grant terms for
+  someone else's code.
+- The framework specification — indicators, OSM tag combinations, category hierarchy — is
+  published in the paper's Supplementary Material under CC BY 4.0, which does permit
+  adaptation with attribution.
+- Classification outputs are derived from OpenStreetMap and therefore fall under ODbL,
+  independently of this repository.
+
+Please cite the paper, not this fork, when referring to BikeNEAT.
+
