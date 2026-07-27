@@ -483,6 +483,38 @@ body {
     border-top: 1px solid var(--panel-border);
 }
 
+/* Link back to the repository this map is built from — the fork, not the upstream
+   BikeNEAT repo, which the credit box at the top links instead. */
+.legend-footer {
+    margin: 14px 0 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--panel-border);
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--text-muted);
+}
+
+.legend-footer a {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: inherit;
+    text-decoration: none;
+}
+
+/* Underline the label but not the mark, so the icon keeps its own shape. */
+.legend-footer a span {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.legend-footer svg {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+}
+
 /* Links anywhere in the legend, and in the popup, get the same orange hover tint
    as the category rows. Inline so the highlight hugs the text rather than the
    whole line of the paragraph it sits in. */
