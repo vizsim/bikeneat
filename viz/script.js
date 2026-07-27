@@ -29,6 +29,10 @@ const RADINFRA_HOVER_LAYER_ID = 'radinfra-hover';
 // a hidden category cannot be hovered or clicked.
 const HIT_PADDING = 6;
 
+// How long the pointer has to sit still before the halo follows it. Long enough that
+// sweeping across the map costs nothing, short enough not to feel like a delay.
+const HOVER_DELAY_MS = 60;
+
 function hitBox(point) {
     return [
         [point.x - HIT_PADDING, point.y - HIT_PADDING],
@@ -587,32 +591,67 @@ function main() {
 
         const present = (ids) => ids.filter((id) => map.getLayer(id));
 
-        function query(event, ids) {
+        function query(point, ids) {
             const layers = present(ids);
-            return layers.length ? map.queryRenderedFeatures(hitBox(event.point), { layers }) : [];
+            return layers.length ? map.queryRenderedFeatures(hitBox(point), { layers }) : [];
         }
 
         // One hovered feature at a time across both datasets. Querying both layer
         // sets in one call means the topmost drawn line wins, which is the overlay
         // where it is switched on.
-        let hovered = null;
-        map.on('mousemove', (event) => {
-            const hits = query(event, [...radinfraIds, ...bikeneatIds]);
-            const top = hits[0] ?? null;
-            const key = top ? `${top.layer.id}:${top.properties.id}` : null;
-            map.getCanvas().style.cursor = top ? 'pointer' : '';
-            if (key === hovered) return;
-            hovered = key;
+        //
+        // The two costs here are not comparable. Changing a filter repaints the whole
+        // map, and running that on every mousemove is the entire cost of hovering:
+        // sweeping the pointer across Berlin at z13 takes 142 ms a frame, and 16.7 ms
+        // with the two setHoverFilter calls stubbed out — the same as with hovering
+        // switched off altogether. The query itself is 0.3–1.5 ms and does not show up.
+        //
+        // So the query runs on the pointer, at most once a frame, which keeps the
+        // cursor honest, and only the halo waits for the pointer to settle. That also
+        // stops every way under a fast sweep from lighting up on the way past.
+        let shown = null;
+        let target = null;
+        let point = null;
+        let frame = null;
+        let timer = null;
 
-            const isRadinfra = Boolean(top?.layer.id.startsWith(RADINFRA.layerPrefix));
-            setHoverFilter(map, HOVER_LAYER_ID,
-                isRadinfra ? null : top?.properties.id ?? null, -1);
-            setHoverFilter(map, RADINFRA_HOVER_LAYER_ID,
-                isRadinfra ? top?.properties.id ?? null : null, '');
+        const applyHover = () => {
+            timer = null;
+            if (target?.key === shown?.key) return;
+            shown = target;
+            const isRadinfra = Boolean(shown?.layerId.startsWith(RADINFRA.layerPrefix));
+            setHoverFilter(map, HOVER_LAYER_ID, isRadinfra ? null : shown?.id ?? null, -1);
+            setHoverFilter(map, RADINFRA_HOVER_LAYER_ID, isRadinfra ? shown?.id ?? null : null, '');
+        };
+
+        const runHoverQuery = () => {
+            frame = null;
+            const top = query(point, [...radinfraIds, ...bikeneatIds])[0] ?? null;
+            const cursor = top ? 'pointer' : '';
+            const canvas = map.getCanvas();
+            if (canvas.style.cursor !== cursor) canvas.style.cursor = cursor;
+
+            const next = top
+                ? { key: `${top.layer.id}:${top.properties.id}`, layerId: top.layer.id, id: top.properties.id }
+                : null;
+            if (next?.key === target?.key) return;
+            target = next;
+            if (timer !== null) window.clearTimeout(timer);
+            timer = window.setTimeout(applyHover, HOVER_DELAY_MS);
+        };
+
+        map.on('mousemove', (event) => {
+            point = event.point;
+            if (frame === null) frame = requestAnimationFrame(runHoverQuery);
         });
 
         map.on('mouseout', () => {
-            hovered = null;
+            if (frame !== null) cancelAnimationFrame(frame);
+            if (timer !== null) window.clearTimeout(timer);
+            frame = null;
+            timer = null;
+            target = null;
+            shown = null;
             map.getCanvas().style.cursor = '';
             setHoverFilter(map, HOVER_LAYER_ID, null, -1);
             setHoverFilter(map, RADINFRA_HOVER_LAYER_ID, null, '');
@@ -622,7 +661,7 @@ function main() {
         // halo is highlighting. A BikeNEAT way opens the popup; a radinfra way opens
         // radinfra.de itself, since this page has nothing to add about it.
         map.on('click', (event) => {
-            const hits = query(event, [...radinfraIds, ...bikeneatIds]);
+            const hits = query(event.point, [...radinfraIds, ...bikeneatIds]);
             const top = hits[0] ?? null;
             if (!top) {
                 popup.remove();
