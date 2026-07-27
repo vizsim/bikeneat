@@ -482,7 +482,32 @@ function bindLoadingIndicator(map) {
     map.on('idle', hide);
 }
 
+// Collapsing leaves the header, so the panel stays identifiable and re-openable
+// while the map gets the space back. On a phone the legend covers the top half of
+// the screen, which is where this matters.
+function bindPanelToggle() {
+    const panel = document.querySelector('.panel');
+    const button = document.getElementById('panel-toggle');
+    if (!panel || !button) return;
+
+    const apply = (collapsed) => {
+        // The minus/plus itself is CSS, keyed off this class; only the name is set here.
+        panel.classList.toggle('is-collapsed', collapsed);
+        button.setAttribute('aria-expanded', String(!collapsed));
+        const label = collapsed ? 'Panel ausklappen' : 'Panel einklappen';
+        button.setAttribute('aria-label', label);
+        button.title = label;
+    };
+
+    button.addEventListener('click', () => {
+        apply(button.getAttribute('aria-expanded') === 'true');
+    });
+}
+
 function main() {
+    // Bound before the map, so the panel folds away even if tiles or the style fail.
+    bindPanelToggle();
+
     const protocol = new pmtiles.Protocol();
     maplibregl.addProtocol('pmtiles', protocol.tile);
 

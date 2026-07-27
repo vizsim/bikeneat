@@ -31,7 +31,10 @@ body {
     /* Ends above the scale bar, which MapLibre places bottom-left: 12px at the top
        plus room for the control and its margin at the bottom. */
     max-height: calc(100% - 64px);
-    overflow-y: auto;
+    /* Flex so .legend is capped at that height rather than overflowing it; the
+       scrolling happens inside .panel-body, which keeps the header — and with it the
+       collapse button — in place while the legend scrolls. */
+    display: flex;
 }
 
 /* Shown while tiles are in flight. Most of the wait is the basemap rather than the
@@ -89,6 +92,11 @@ body {
     padding: 14px 16px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
     backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    /* Without this the body cannot shrink below its content and the panel's
+       max-height has no effect. */
+    min-height: 0;
 }
 
 .legend h3 {
@@ -97,8 +105,124 @@ body {
     line-height: 1.3;
 }
 
+.legend-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+/* The rule under the header only makes sense while something scrolls beneath it;
+   collapsed, it would be a line across the bottom of the panel. */
+.panel:not(.is-collapsed) .legend-header {
+    padding-bottom: 11px;
+    margin-bottom: 11px;
+    border-bottom: 1px solid var(--panel-border);
+}
+
+/* Everything except the header. Scrolls on its own, and is what the collapse
+   button hides. */
+.panel-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    /* The negative margin cancels the padding, so the text sits where it did and
+       only the scroll box grows: the scrollbar ends up near the panel edge with the
+       padding as clearance to the text. The padding also has to clear the -6px
+       bleed of .legend-item--toggle, which would otherwise stick out of the scroll
+       box and add a horizontal scrollbar. */
+    margin: 0 -12px;
+    padding: 0 12px;
+    /* Chrome's default is an overlay scrollbar, drawn on top of the text at the
+       edge of the box — so the padding above would be clearance it ignores. Asking
+       for a styled one gives it its own gutter, in both engines. */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(28, 31, 35, 0.22) transparent;
+}
+
+/* For Safari and Chrome before 121, which have no scrollbar-width. Newer Chrome
+   ignores these in favour of the two properties above. */
+.panel-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.panel-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.panel-body::-webkit-scrollbar-thumb {
+    background: rgba(28, 31, 35, 0.22);
+    border-radius: 4px;
+}
+
+.panel-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(28, 31, 35, 0.38);
+}
+
+.panel.is-collapsed .panel-body {
+    display: none;
+}
+
+/* Minus while open, plus while collapsed. Drawn as two bars rather than set as
+   text: the − glyph is metrically centred in its em box, not optically, so in a
+   24px square it sits visibly high and reads thin next to the +. */
+.panel-toggle {
+    flex: none;
+    /* Pulled into the panel corner without moving the title's baseline. */
+    margin: -2px -4px 0 0;
+    position: relative;
+    width: 24px;
+    height: 24px;
+    border: 1px solid var(--panel-border);
+    border-radius: 5px;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background-color 0.12s, color 0.12s;
+}
+
+.panel-toggle::before,
+.panel-toggle::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 11px;
+    height: 2px;
+    margin: -1px 0 0 -5.5px;
+    border-radius: 1px;
+    background: currentColor;
+}
+
+/* The upright bar is what turns the minus into a plus, so it only shows while
+   collapsed — growing out of the horizontal one rather than appearing. */
+.panel-toggle::after {
+    transform: rotate(90deg) scaleX(0);
+    transition: transform 0.18s ease;
+}
+
+.panel.is-collapsed .panel-toggle::after {
+    transform: rotate(90deg) scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .panel-toggle::after {
+        transition: none;
+    }
+}
+
+.panel-toggle:hover {
+    background-color: rgba(251, 146, 60, 0.28);
+    color: var(--text);
+}
+
+.panel-toggle:focus-visible {
+    outline: 2px solid #174ed9;
+    outline-offset: 1px;
+}
+
 .panel-sub {
-    margin: 2px 0 12px;
+    margin: 3px 0 0;
     font-size: 12px;
     color: var(--text-muted);
 }
@@ -414,5 +538,22 @@ body {
 @media (max-width: 640px) {
     .panel {
         max-width: calc(100% - 24px);
+        /* Half the viewport minus the 12px inset, so the bottom half of the map is
+           always uncovered. The legend scrolls inside that, and the collapse button
+           gives the whole screen back. */
+        max-height: calc(50% - 12px);
+    }
+
+    /* The panel now spans the full width, so both of these have to come out from
+       under it. The zoom buttons move to the bottom-right corner, above the
+       attribution, where they are also easier to reach with a thumb. */
+    .loading {
+        top: auto;
+        bottom: 40px;
+    }
+
+    .maplibregl-ctrl-top-right {
+        top: auto;
+        bottom: 34px;
     }
 }
